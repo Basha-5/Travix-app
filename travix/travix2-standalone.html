@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Travix2 — Smart Ride Booking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{
+  --primary:#7C3AED;--primary-light:#9F67F5;--primary-dark:#5B21B6;--primary-glow:rgba(124,58,237,.35);
+  --accent:#06B6D4;--success:#10B981;--success-light:#34D399;--warning:#F59E0B;
+  --danger:#EF4444;--danger-light:#F87171;--danger-glow:rgba(239,68,68,.35);
+  --bg-base:#0A0A0F;--bg-surface:#111118;--bg-card:#16161F;--bg-card-hover:#1E1E2A;--bg-input:#1A1A24;
+  --border:rgba(255,255,255,.08);--border-strong:rgba(255,255,255,.15);
+  --text-primary:#F1F0FB;--text-secondary:#A09DB5;--text-muted:#6B6880;
+  --grad-primary:linear-gradient(135deg,#7C3AED 0%,#06B6D4 100%);
+  --grad-danger:linear-gradient(135deg,#EF4444,#DC2626);
+  --grad-success:linear-gradient(135deg,#10B981,#059669);
+  --shadow-primary:0 0 30px rgba(124,58,237,.25);--shadow-lg:0 8px 32px rgba(0,0,0,.6);
+  --radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:24px;--radius-full:9999px;
+  --transition:all .2s cubic-bezier(.4,0,.2,1);--font-sans:'Inter',sans-serif;--font-display:'Space Grotesk',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-sans);background:var(--bg-base);color:var(--text-primary);min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg-surface)}::-webkit-scrollbar-thumb{background:var(--primary-dark);border-radius:3px}
+h1,h2,h3,h4{font-family:var(--font-display);font-weight:700;line-height:1.2}
+a{color:inherit;text-decoration:none}button{cursor:pointer;font-family:inherit;border:none;background:none}
+input,select,textarea{font-family:inherit;background:none;border:none;outline:none;color:inherit}
+
+/* Navbar */
+.navbar{position:fixed;top:0;left:0;right:0;z-index:1000;height:64px;display:flex;align-items:center;padding:0 1.5rem;gap:1rem;background:rgba(10,10,15,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.navbar-brand{font-family:var(--font-display);font-size:1.4rem;font-weight:800;background:var(--grad-primary);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-right:auto}
+.nav-btn{padding:.45rem .9rem;border-radius:var(--radius-md);font-size:.85rem;font-weight:600;color:var(--text-secondary);transition:var(--transition);cursor:pointer;background:none;border:none}
+.nav-btn:hover,.nav-btn.active{color:var(--text-primary);background:var(--bg-card)}
+.nav-btn.primary{background:var(--grad-primary);color:#fff;box-shadow:var(--shadow-primary)}
+
+/* Layout */
+.page{display:none;min-height:100vh;padding-top:64px}
+.page.active{display:block}
+.container{max-width:1200px;margin:0 auto;padding:0 1.5rem}
+.page-content{padding:2rem 1.5rem;max-width:1200px;margin:0 auto}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.75rem 1.5rem;border-radius:var(--radius-md);font-size:.95rem;font-weight:600;transition:all .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;cursor:pointer;border:none}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--grad-primary);color:#fff;box-shadow:var(--shadow-primary)}
+.btn-primary:hover{box-shadow:0 0 40px rgba(124,58,237,.45)}
+.btn-secondary{background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border-strong)}
+.btn-secondary:hover{border-color:var(--primary)}
+.btn-danger{background:var(--grad-danger);color:#fff;box-shadow:var(--shadow-primary)}
+.btn-success{background:var(--grad-success);color:#fff}
+.btn-ghost{color:var(--text-secondary)}
+.btn-ghost:hover{color:var(--text-primary);background:var(--bg-card);border-radius:var(--radius-md)}
+.btn-lg{padding:1rem 2rem;font-size:1.05rem;border-radius:var(--radius-lg)}
+.btn-sm{padding:.45rem .9rem;font-size:.85rem}
+.btn-full{width:100%}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+
+/* Cards */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;transition:var(--transition)}
+.card:hover{border-color:var(--border-strong)}
+.card-hover:hover{border-color:var(--primary);box-shadow:var(--shadow-primary);transform:translateY(-2px)}
+.card-selected{border-color:var(--primary)!important;box-shadow:var(--shadow-primary)!important;background:linear-gradient(145deg,#16161F,#1E143A)!important}
+
+/* Form */
+.form-group{display:flex;flex-direction:column;gap:.5rem;margin-bottom:.75rem}
+.form-label{font-size:.875rem;font-weight:500;color:var(--text-secondary)}
+.form-input{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-md);padding:.875rem 1rem;color:var(--text-primary);font-size:.95rem;width:100%;transition:var(--transition)}
+.form-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow)}
+.form-input::placeholder{color:var(--text-muted)}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .6rem;border-radius:var(--radius-full);font-size:.75rem;font-weight:600}
+.badge-success{background:rgba(16,185,129,.2);color:#34D399;border:1px solid rgba(16,185,129,.3)}
+.badge-danger{background:rgba(239,68,68,.2);color:#F87171;border:1px solid rgba(239,68,68,.3)}
+.badge-primary{background:rgba(124,58,237,.2);color:#9F67F5;border:1px solid rgba(124,58,237,.3)}
+.badge-warning{background:rgba(245,158,11,.2);color:#FCD34D;border:1px solid rgba(245,158,11,.3)}
+.badge-female{background:rgba(236,72,153,.2);color:#F472B6;border:1px solid rgba(236,72,153,.3)}
+.badge-male{background:rgba(59,130,246,.2);color:#60A5FA;border:1px solid rgba(59,130,246,.3)}
+.badge-mixed{background:rgba(245,158,11,.2);color:#FCD34D;border:1px solid rgba(245,158,11,.3)}
+
+/* Animations */
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.7;transform:scale(1.1)}}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes sos-ring{0%{box-shadow:0 0 0 0 rgba(239,68,68,.7)}70%{box-shadow:0 0 0 20px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.animate-up{animation:slideUp .4s ease forwards}
+.animate-fade{animation:fadeIn .3s ease forwards}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
+.spinner-lg{width:48px;height:48px;border-width:3px}
+
+/* Map */
+.map-container{width:100%;height:400px;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border)}
+.map-full{height:100%;border-radius:0;border:none}
+.leaflet-container{background:#1a1a2e!important}
+.leaflet-popup-content-wrapper{background:var(--bg-card)!important;color:var(--text-primary)!important;border:1px solid var(--border)!important;border-radius:var(--radius-md)!important}
+.leaflet-popup-tip{background:var(--bg-card)!important}
+
+/* SOS */
+.sos-btn{position:fixed;bottom:2rem;right:2rem;z-index:9999;width:64px;height:64px;border-radius:50%;background:var(--grad-danger);color:#fff;font-size:1rem;font-weight:900;box-shadow:var(--shadow-primary);animation:sos-ring 2s infinite;transition:all .3s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;justify-content:center;flex-direction:column;line-height:1;gap:2px;border:none;cursor:pointer}
+.sos-btn:hover{transform:scale(1.1)}
+.sos-btn span{font-size:.6rem;font-weight:700;letter-spacing:.1em}
+
+/* Hero */
+.hero{min-height:100vh;background:linear-gradient(135deg,#0A0A0F 0%,#1A0A35 50%,#0A1A2E 100%);position:relative;overflow:hidden;display:flex;align-items:center}
+.hero::before{content:'';position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,.15) 0%,transparent 70%);top:-100px;right:-100px;pointer-events:none}
+.hero::after{content:'';position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(6,182,212,.1) 0%,transparent 70%);bottom:-100px;left:-50px;pointer-events:none}
+.hero-content{position:relative;z-index:1;padding:2rem 1.5rem;max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:var(--radius-full);padding:.4rem 1rem;font-size:.85rem;color:var(--primary-light);margin-bottom:1.5rem}
+.hero-title{font-size:clamp(2rem,4vw,3.5rem);margin-bottom:1.25rem;background:linear-gradient(135deg,var(--text-primary) 0%,var(--primary-light) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-subtitle{font-size:1.1rem;color:var(--text-secondary);margin-bottom:2rem;line-height:1.7}
+.hero-ctas{display:flex;gap:1rem;flex-wrap:wrap}
+.grad-text{background:var(--grad-primary);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* Features Grid */
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
+.feature-icon{width:52px;height:52px;border-radius:var(--radius-md);background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.25);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:1rem}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;text-align:center}
+.stat-value{font-size:2rem;font-weight:800;background:var(--grad-primary);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-label{font-size:.85rem;color:var(--text-muted);margin-top:.25rem}
+
+/* Ride type cards */
+.ride-type-card{background:var(--bg-card);border:2px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;cursor:pointer;transition:all .3s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;gap:1rem;width:100%}
+.ride-type-card:hover{border-color:var(--primary);transform:translateY(-2px)}
+.ride-type-card.selected{border-color:var(--primary);background:linear-gradient(145deg,#16161F,#1E143A);box-shadow:var(--shadow-primary)}
+
+/* Step tracker */
+.step-tracker{display:flex;align-items:center;margin-bottom:2rem}
+.step-circle{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;border:2px solid var(--border);background:var(--bg-card);color:var(--text-muted);flex-shrink:0;transition:var(--transition)}
+.step-circle.active{border-color:var(--primary);background:var(--primary);color:#fff;box-shadow:var(--shadow-primary)}
+.step-circle.done{border-color:var(--success);background:var(--success);color:#fff}
+.step-label{font-size:.7rem;color:var(--text-muted);white-space:nowrap;margin-left:.35rem}
+.step-label.active{color:var(--primary-light);font-weight:600}
+.step-connector{flex:1;height:2px;background:var(--border);margin:0 .35rem}
+.step-connector.done{background:var(--success)}
+
+/* Route visual */
+.route-visual{display:flex;flex-direction:column}
+.route-point{display:flex;align-items:center;gap:.75rem;padding:.75rem;background:var(--bg-card);border-radius:var(--radius-md)}
+.route-point:first-child{border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom:1px solid var(--border)}
+.route-point:last-child{border-top-left-radius:0;border-top-right-radius:0}
+.route-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.route-dot.pickup{background:var(--success);box-shadow:0 0 8px var(--success)}
+.route-dot.dest{background:var(--danger);box-shadow:0 0 8px var(--danger)}
+.route-line{width:2px;height:24px;background:linear-gradient(to bottom,var(--success),var(--danger));margin-left:17px}
+
+/* Receipt */
+.receipt-card{background:var(--bg-card);border-radius:var(--radius-xl);overflow:hidden;border:1px solid var(--border);max-width:440px;margin:0 auto}
+.receipt-header{background:var(--grad-primary);padding:2rem;text-align:center}
+.receipt-body{padding:1.5rem}
+.receipt-row{display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;border-bottom:1px solid var(--border);font-size:.9rem}
+.receipt-row:last-child{border-bottom:none}
+.receipt-row.total{font-size:1.1rem;font-weight:700}
+.receipt-total-amount{font-size:1.5rem;color:var(--primary-light);font-weight:800}
+
+/* Auth tabs */
+.tabs{display:flex;background:var(--bg-card);padding:.25rem;border-radius:var(--radius-md);margin-bottom:1.5rem}
+.tab-btn{flex:1;padding:.6rem;border-radius:var(--radius-sm);font-size:.9rem;font-weight:600;color:var(--text-muted);transition:var(--transition);background:none;border:none;cursor:pointer}
+.tab-btn.active{background:var(--primary);color:#fff;box-shadow:var(--shadow-primary)}
+
+/* Safety alert */
+.safety-alert{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);border-radius:var(--radius-lg);padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;animation:slideUp .3s ease;margin-bottom:.75rem}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(8px);z-index:9990;display:flex;align-items:center;justify-content:center;padding:1.5rem;animation:fadeIn .2s ease}
+.modal{background:#12121A;border:1px solid var(--border-strong);border-radius:var(--radius-xl);padding:2rem;max-width:460px;width:100%;animation:slideUp .3s ease;box-shadow:var(--shadow-lg)}
+
+/* Driver sidebar */
+.driver-sidebar{width:380px;min-height:calc(100vh - 64px);background:var(--bg-surface);border-right:1px solid var(--border);overflow-y:auto;padding:1.5rem;flex-shrink:0}
+
+/* Gender bar */
+.gender-bar{height:8px;border-radius:var(--radius-full);overflow:hidden;display:flex;margin:.5rem 0}
+.gender-bar-f{background:#EC4899}
+.gender-bar-m{background:#3B82F6}
+
+/* PIN */
+.pin-digit{width:60px;height:70px;text-align:center;font-size:2rem;font-weight:700;background:var(--bg-input);border:2px solid var(--border);border-radius:var(--radius-md);color:var(--text-primary);transition:var(--transition)}
+.pin-digit:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow)}
+.pin-inputs{display:flex;gap:.75rem;justify-content:center}
+
+/* Toggle */
+.toggle-switch{width:44px;height:24px;border-radius:12px;background:var(--bg-input);border:2px solid var(--border);padding:2px;transition:all .3s;cursor:pointer;position:relative}
+.toggle-switch.on{background:var(--primary);border-color:var(--primary)}
+.toggle-knob{width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .3s}
+.toggle-switch.on .toggle-knob{transform:translateX(20px)}
+
+/* Toast */
+.toast-container{position:fixed;top:80px;right:1.5rem;z-index:9998;display:flex;flex-direction:column;gap:.5rem;min-width:300px}
+.toast{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:1rem 1.25rem;display:flex;align-items:flex-start;gap:.75rem;box-shadow:var(--shadow-lg);animation:slideUp .3s ease}
+.toast.success{border-left:3px solid var(--success)}
+.toast.danger{border-left:3px solid var(--danger)}
+.toast.warning{border-left:3px solid var(--warning)}
+.toast.info{border-left:3px solid var(--accent)}
+
+/* Scrollable sections */
+section{padding:5rem 0}
+.divider{height:1px;background:var(--border);margin:1rem 0}
+.avatar{width:40px;height:40px;border-radius:50%;background:var(--grad-primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;color:#fff;flex-shrink:0}
+.avatar-lg{width:64px;height:64px;font-size:1.5rem}
+.avatar-xl{width:96px;height:96px;font-size:2rem}
+.stars{color:var(--warning);letter-spacing:2px}
+.status-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.status-dot.online{background:var(--success);box-shadow:0 0 8px var(--success)}
+.status-dot.offline{background:var(--text-muted)}
+
+/* Grid helpers */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+.flex{display:flex}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-1{gap:.25rem}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}.gap-6{gap:1.5rem}
+.w-full{width:100%}.text-center{text-align:center}.mt-4{margin-top:1rem}.mb-4{margin-bottom:1rem}
+.text-muted{color:var(--text-muted)}.text-success{color:var(--success)}.text-danger{color:var(--danger)}.text-primary-c{color:var(--primary-light)}
+.fw-700{font-weight:700}.fw-800{font-weight:800}.fs-sm{font-size:.875rem}.fs-xs{font-size:.8rem}
+
+@media(max-width:768px){
+  .hero-content{grid-template-columns:1fr;gap:2rem}
+  .features-grid{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .grid-2{grid-template-columns:1fr}
+  .grid-3{grid-template-columns:1fr}
+  .grid-4{grid-template-columns:1fr 1fr}
+  .driver-sidebar{width:100%;min-height:auto}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     NAVBAR
+═══════════════════════════════════════════ -->
+<nav class="navbar" id="navbar">
+  <span class="navbar-brand">🚖 Travix2</span>
+  <div id="nav-links-public" style="display:flex;align-items:center;gap:.25rem">
+    <button class="nav-btn" onclick="showPage('landing')">Home</button>
+    <button class="nav-btn" onclick="showPage('auth')">Login</button>
+    <button class="nav-btn primary" onclick="showPage('auth')">Get Started</button>
+  </div>
+  <div id="nav-links-rider" style="display:none;align-items:center;gap:.25rem">
+    <button class="nav-btn" onclick="showPage('booking')" id="nb-book">Book Ride</button>
+    <button class="nav-btn" onclick="showPage('group')" id="nb-group">Group Rides</button>
+    <button class="nav-btn" onclick="showPage('history')" id="nb-history">History</button>
+    <button class="nav-btn" onclick="showPage('safety')" id="nb-safety">Safety</button>
+    <button class="nav-btn" onclick="showPage('profile')" id="nb-profile">Profile</button>
+    <div class="avatar" id="rider-avatar" style="cursor:pointer" onclick="showPage('profile')">U</div>
+  </div>
+  <div id="nav-links-driver" style="display:none;align-items:center;gap:.25rem">
+    <button class="nav-btn" onclick="showPage('driver')">Dashboard</button>
+    <button class="nav-btn" onclick="showPage('history')">History</button>
+    <button class="nav-btn" onclick="showPage('profile')">Profile</button>
+    <div class="avatar" id="driver-avatar" style="cursor:pointer" onclick="showPage('profile')">D</div>
+  </div>
+</nav>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ═══════════════════════════════════════════
+     LANDING PAGE
+═══════════════════════════════════════════ -->
+<div class="page active" id="page-landing">
+  <div class="hero">
+    <div class="hero-content container">
+      <div class="animate-up">
+        <div class="hero-badge">🚀 Next-Gen Ride Booking Platform</div>
+        <h1 class="hero-title">Smart Rides.<br/>Real-Time Safety.<br/>Your City, Connected.</h1>
+        <p class="hero-subtitle">Book rides instantly, track in real-time, travel safely in groups. The most advanced ride-hailing experience built for modern cities.</p>
+        <div class="hero-ctas">
+          <button class="btn btn-primary btn-lg" onclick="goToAuth('rider')">🚗 Book a Ride</button>
+          <button class="btn btn-secondary btn-lg" onclick="goToAuth('driver')">🚖 Drive with Us</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:1rem;animation:float 3s ease-in-out infinite">
+        <div class="card" style="border-color:rgba(124,58,237,.3)">
+          <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem">
+            <div class="avatar" style="background:var(--grad-success)">P</div>
+            <div><div style="font-weight:700">Priya S.</div><div class="stars" style="font-size:.8rem">★★★★★</div></div>
+            <span class="badge badge-success" style="margin-left:auto">In Ride</span>
+          </div>
+          <div class="route-visual">
+            <div class="route-point" style="padding:.5rem"><div class="route-dot pickup"></div><span style="font-size:.8rem">MG Road Metro</span></div>
+            <div class="route-line"></div>
+            <div class="route-point" style="padding:.5rem"><div class="route-dot dest"></div><span style="font-size:.8rem">Koramangala</span></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+          <div class="card" style="padding:1rem;text-align:center"><div style="font-size:1.5rem;margin-bottom:.25rem">🛡️</div><div style="font-weight:700;font-size:.85rem">Safety</div><div style="color:var(--success);font-size:.75rem">Active</div></div>
+          <div class="card" style="padding:1rem;text-align:center"><div style="font-size:1.5rem;margin-bottom:.25rem">⏱️</div><div style="font-weight:700;font-size:.85rem">ETA</div><div style="color:var(--primary-light);font-size:.75rem">4 min</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <section style="padding:5rem 0;background:var(--bg-surface)">
+    <div class="container">
+      <h2 style="text-align:center;margin-bottom:.75rem" class="grad-text">Everything You Need</h2>
+      <p style="text-align:center;color:var(--text-muted);margin-bottom:3rem">Designed for safety, built for speed, perfected for your city</p>
+      <div class="features-grid">
+        <div class="card card-hover">
+          <div class="feature-icon">🗺️</div>
+          <h3 style="font-size:1.1rem;margin-bottom:.5rem">Live GPS Tracking</h3>
+          <p style="font-size:.9rem;color:var(--text-muted)">Real-time driver location, animated route, and accurate ETA updates every few seconds.</p>
+        </div>
+        <div class="card card-hover">
+          <div class="feature-icon">👥</div>
+          <h3 style="font-size:1.1rem;margin-bottom:.5rem">Smart Group Rides</h3>
+          <p style="font-size:.9rem;color:var(--text-muted)">Match with riders on similar routes. View gender composition and driver details before joining.</p>
+        </div>
+        <div class="card card-hover">
+          <div class="feature-icon">🛡️</div>
+          <h3 style="font-size:1.1rem;margin-bottom:.5rem">Safety System</h3>
+          <p style="font-size:.9rem;color:var(--text-muted)">SOS alerts, trusted contacts, route deviation and 10-minute stop detection built in.</p>
+        </div>
+        <div class="card card-hover">
+          <div class="feature-icon">💳</div>
+          <h3 style="font-size:1.1rem;margin-bottom:.5rem">Seamless Payments</h3>
+          <p style="font-size:.9rem;color:var(--text-muted)">Cash, Card, UPI, Wallet — transparent fare breakdown with instant digital receipts.</p>
+        </div>
+        <div class="card card-hover">
+          <div class="feature-icon">⚡</div>
+          <h3 style="font-size:1.1rem;margin-bottom:.5rem">Instant Matching</h3>
+          <p style="font-size:.9rem;color:var(--text-muted)">Driver matching in under 60 seconds with PIN-verified ride start for maximum security.</p>
+        </div>
+        <div class="card card-hover">
+          <div class="feature-icon">⭐</div>
+          <h3 style="font-size:1.1rem;margin-bottom:.5rem">Trusted Community</h3>
+          <p style="font-size:.9rem;color:var(--text-muted)">Verified drivers, two-way ratings, and transparent profiles for every ride.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section style="padding:4rem 0">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-value">50K+</div><div class="stat-label">Total Rides</div></div>
+        <div class="stat-card"><div class="stat-value">15K+</div><div class="stat-label">Verified Drivers</div></div>
+        <div class="stat-card"><div class="stat-value">4.9★</div><div class="stat-label">Average Rating</div></div>
+        <div class="stat-card"><div class="stat-value">99%</div><div class="stat-label">Safe Rides</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section style="padding:5rem 0;background:var(--bg-surface);text-align:center">
+    <div class="container">
+      <h2 style="margin-bottom:1rem">Ready to Ride Smarter?</h2>
+      <p style="color:var(--text-muted);margin-bottom:2rem;font-size:1.05rem">Join thousands of riders and drivers on Travix2</p>
+      <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary btn-lg" onclick="goToAuth('rider')">🚗 Get Started as Rider</button>
+        <button class="btn btn-secondary btn-lg" onclick="goToAuth('driver')">🚖 Register as Driver</button>
+      </div>
+    </div>
+  </section>
+
+  <footer style="background:var(--bg-base);border-top:1px solid var(--border);padding:2rem 0;text-align:center">
+    <div class="container">
+      <div class="navbar-brand" style="display:inline-block;margin-bottom:.5rem">🚖 Travix2</div>
+      <p style="color:var(--text-muted);font-size:.875rem">Smart rides for smart cities. Safe, reliable, affordable.</p>
+    </div>
+  </footer>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     AUTH PAGE
+═══════════════════════════════════════════ -->
+<div class="page" id="page-auth">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;background:radial-gradient(ellipse at top,rgba(124,58,237,.1) 0%,transparent 60%)">
+    <div style="width:100%;max-width:460px;animation:slideUp .4s ease">
+      <div style="text-align:center;margin-bottom:2rem">
+        <div style="font-size:3rem;margin-bottom:.5rem">🚖</div>
+        <h1 class="grad-text" style="font-size:2rem">Travix2</h1>
+        <p style="color:var(--text-muted)">Your smart ride-booking platform</p>
+      </div>
+      <div class="card" style="padding:2rem">
+        <div class="tabs">
+          <button class="tab-btn active" id="tab-login" onclick="switchAuthTab('login')">Login</button>
+          <button class="tab-btn" id="tab-register" onclick="switchAuthTab('register')">Register</button>
+        </div>
+
+        <!-- Login Form -->
+        <div id="auth-login">
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input class="form-input" type="email" id="login-email" placeholder="you@email.com"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input class="form-input" type="password" id="login-password" placeholder="••••••••"/>
+          </div>
+          <div id="login-error" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:var(--radius-md);padding:.75rem 1rem;font-size:.875rem;color:var(--danger-light);margin-bottom:.75rem"></div>
+          <button class="btn btn-primary btn-full btn-lg" id="login-btn" onclick="doLogin()" style="margin-top:.5rem">Sign In</button>
+          <p style="text-align:center;color:var(--text-muted);font-size:.85rem;margin-top:1rem">Demo: use any email + "password123"</p>
+        </div>
+
+        <!-- Register Form -->
+        <div id="auth-register" style="display:none">
+          <!-- Role toggle -->
+          <div style="display:flex;gap:.5rem;margin-bottom:1rem">
+            <button class="btn btn-primary" id="role-rider" onclick="setRole('rider')" style="flex:1">🧑 Rider</button>
+            <button class="btn btn-secondary" id="role-driver" onclick="setRole('driver')" style="flex:1">🚖 Driver</button>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input class="form-input" id="reg-name" placeholder="Your full name"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input class="form-input" type="email" id="reg-email" placeholder="you@email.com"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input class="form-input" id="reg-phone" placeholder="+91 98765 43210"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gender</label>
+            <select class="form-input" id="reg-gender">
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input class="form-input" type="password" id="reg-password" placeholder="••••••••"/>
+          </div>
+          <!-- Driver fields -->
+          <div id="driver-fields" style="display:none">
+            <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:var(--radius-md);padding:1rem;margin-bottom:.75rem">
+              <p style="font-size:.85rem;color:var(--primary-light);font-weight:600;margin-bottom:.75rem">🚗 Vehicle Information</p>
+              <div class="form-group"><input class="form-input" id="v-make" placeholder="Vehicle Make (e.g. Honda)"/></div>
+              <div class="form-group"><input class="form-input" id="v-model" placeholder="Vehicle Model (e.g. City)"/></div>
+              <div class="form-group"><input class="form-input" id="v-color" placeholder="Color (e.g. White)"/></div>
+              <div class="form-group"><input class="form-input" id="v-plate" placeholder="License Plate (e.g. KA-01-AB-1234)"/></div>
+              <div class="form-group">
+                <select class="form-input" id="v-type">
+                  <option value="economy">Economy</option>
+                  <option value="comfort">Comfort</option>
+                  <option value="premium">Premium</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div id="reg-error" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:var(--radius-md);padding:.75rem 1rem;font-size:.875rem;color:var(--danger-light);margin-bottom:.75rem"></div>
+          <button class="btn btn-primary btn-full btn-lg" onclick="doRegister()">Create Account</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     BOOKING PAGE
+═══════════════════════════════════════════ -->
+<div class="page" id="page-booking">
+  <div style="display:grid;grid-template-columns:460px 1fr;min-height:calc(100vh - 64px)" id="booking-layout">
+    <!-- Left Panel -->
+    <div style="padding:2rem;overflow-y:auto;border-right:1px solid var(--border)">
+      <!-- Step Tracker -->
+      <div class="step-tracker" id="step-tracker"></div>
+      <!-- Step content -->
+      <div id="booking-step-content"></div>
+    </div>
+    <!-- Map -->
+    <div style="position:sticky;top:64px;height:calc(100vh - 64px)" id="booking-map-container">
+      <div id="booking-map" style="height:100%;border-radius:0;border:none"></div>
+    </div>
+  </div>
+  <style>@media(max-width:900px){#booking-layout{grid-template-columns:1fr!important;grid-template-rows:auto 320px}#booking-map-container{height:320px;position:relative;top:0}}</style>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TRACKING PAGE
+═══════════════════════════════════════════ -->
+<div class="page" id="page-tracking">
+  <div style="display:grid;grid-template-columns:60% 40%;height:calc(100vh - 64px)">
+    <div id="tracking-map" style="height:100%"></div>
+    <div style="overflow-y:auto;padding:1.5rem;background:var(--bg-surface);border-left:1px solid var(--border);display:flex;flex-direction:column;gap:1rem">
+      <div id="tracking-status-badge"></div>
+      <div class="card" id="tracking-driver-card"></div>
+      <div id="tracking-route"></div>
+      <div id="tracking-pin-box"></div>
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center">
+        <span style="color:var(--text-muted)">Estimated Fare</span>
+        <span style="font-weight:800;font-size:1.25rem;color:var(--primary-light)">₹185</span>
+      </div>
+      <button class="btn btn-secondary btn-full" onclick="showToast('Live location link copied!','success')">🔗 Share Live Location</button>
+      <button class="btn btn-full" style="color:var(--danger);border:1px solid rgba(239,68,68,.4);background:var(--bg-card)" onclick="showPage('booking');showToast('Ride cancelled','info')">✕ Cancel Ride</button>
+      <button class="btn btn-success btn-full" onclick="showPage('payment')">✅ Simulate Ride Complete →</button>
+    </div>
+  </div>
+  <button class="sos-btn" onclick="triggerSOS()">🆘<span>SOS</span></button>
+  <style>@media(max-width:768px){#page-tracking>div{grid-template-columns:1fr!important;grid-template-rows:300px auto}}</style>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     DRIVER DASHBOARD
+═══════════════════════════════════════════ -->
+<div class="page" id="page-driver">
+  <div style="display:flex;min-height:calc(100vh - 64px)">
+    <div class="driver-sidebar" id="driver-sidebar"></div>
+    <div style="flex:1;overflow:hidden">
+      <div id="driver-map" style="height:calc(100vh - 64px)"></div>
+    </div>
+  </div>
+  <style>@media(max-width:768px){#page-driver>div{flex-direction:column}.driver-sidebar{width:100%!important}}</style>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     GROUP RIDE PAGE
+═══════════════════════════════════════════ -->
+<div class="page" id="page-group">
+  <div class="page-content">
+    <h1 style="font-size:1.75rem;font-weight:700;margin-bottom:.25rem">👥 Smart Group Rides</h1>
+    <p style="color:var(--text-muted);margin-bottom:1.5rem">Share routes, split fares, ride smarter</p>
+    <div class="card" style="margin-bottom:1.5rem">
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:1rem;align-items:end">
+        <div class="form-group" style="margin:0"><label class="form-label">Pickup</label><input class="form-input" id="grp-pickup" placeholder="Your pickup location..."/></div>
+        <div class="form-group" style="margin:0"><label class="form-label">Destination</label><input class="form-input" id="grp-dest" placeholder="Your destination..."/></div>
+        <button class="btn btn-primary" onclick="searchGroupRides()">🔍 Find</button>
+      </div>
+    </div>
+    <div id="group-rides-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAYMENT PAGE
+═══════════════════════════════════════════ -->
+<div class="page" id="page-payment">
+  <div class="page-content">
+    <h1 style="font-size:1.75rem;font-weight:700;margin-bottom:.25rem">💳 Payment</h1>
+    <p style="color:var(--text-muted);margin-bottom:1.5rem">Review and complete your payment</p>
+    <div class="grid-2">
+      <div class="receipt-card">
+        <div class="receipt-header">
+          <div style="font-size:2.5rem;margin-bottom:.5rem">🚗</div>
+          <h2 style="color:#fff;margin:0">Ride Completed!</h2>
+          <p style="color:rgba(255,255,255,.8);font-size:.875rem;margin:.25rem 0 0"></p>
+        </div>
+        <div class="receipt-body">
+          <div class="receipt-row"><span style="color:var(--text-muted)">📍 From</span><span style="font-size:.85rem;text-align:right;max-width:55%">MG Road Metro, Bengaluru</span></div>
+          <div class="receipt-row"><span style="color:var(--text-muted)">🏁 To</span><span style="font-size:.85rem;text-align:right;max-width:55%">Koramangala, Bengaluru</span></div>
+          <div class="receipt-row"><span style="color:var(--text-muted)">Ride Type</span><span>Economy</span></div>
+          <div class="receipt-row"><span style="color:var(--text-muted)">Distance</span><span>8.5 km</span></div>
+          <div class="receipt-row"><span style="color:var(--text-muted)">Duration</span><span>22 min</span></div>
+          <div class="divider"></div>
+          <div class="receipt-row"><span style="color:var(--text-muted)">Base Fare</span><span>₹30</span></div>
+          <div class="receipt-row"><span style="color:var(--text-muted)">Distance</span><span>₹108</span></div>
+          <div class="receipt-row"><span style="color:var(--text-muted)">Time</span><span>₹33</span></div>
+          <div class="receipt-row"><span style="color:var(--text-muted)">Surge</span><span>1.0x</span></div>
+          <div class="receipt-row total"><span>Total</span><span class="receipt-total-amount">₹185</span></div>
+        </div>
+      </div>
+      <div>
+        <h3 style="font-weight:700;margin-bottom:1rem">Select Payment Method</h3>
+        <div class="grid-2" style="margin-bottom:1rem">
+          <button class="card" id="pm-cash" onclick="selectPayment('cash')" style="cursor:pointer;text-align:center;padding:1rem;flex-direction:column;gap:.4rem;border:2px solid var(--primary)">
+            <div style="font-size:1.75rem">💵</div><strong>Cash</strong><span style="font-size:.75rem;color:var(--text-muted)">Pay driver directly</span>
+          </button>
+          <button class="card" id="pm-card" onclick="selectPayment('card')" style="cursor:pointer;text-align:center;padding:1rem;flex-direction:column;gap:.4rem">
+            <div style="font-size:1.75rem">💳</div><strong>Card</strong><span style="font-size:.75rem;color:var(--text-muted)">Debit / Credit</span>
+          </button>
+          <button class="card" id="pm-upi" onclick="selectPayment('upi')" style="cursor:pointer;text-align:center;padding:1rem;flex-direction:column;gap:.4rem">
+            <div style="font-size:1.75rem">📱</div><strong>UPI</strong><span style="font-size:.75rem;color:var(--text-muted)">GPay, PhonePe</span>
+          </button>
+          <button class="card" id="pm-wallet" onclick="selectPayment('wallet')" style="cursor:pointer;text-align:center;padding:1rem;flex-direction:column;gap:.4rem">
+            <div style="font-size:1.75rem">👛</div><strong>Wallet</strong><span style="font-size:.75rem;color:var(--text-muted)">₹500 balance</span>
+          </button>
+        </div>
+        <div id="payment-extra" style="margin-bottom:1rem"></div>
+        <button class="btn btn-primary btn-full btn-lg" id="pay-btn" onclick="processPayment()">Pay ₹185</button>
+        <div id="payment-processing" style="display:none;text-align:center;padding:2rem">
+          <div class="spinner spinner-lg" style="margin:0 auto 1rem"></div>
+          <p style="color:var(--text-muted)">Processing payment...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     RECEIPT PAGE
+═══════════════════════════════════════════ -->
+<div class="page" id="page-receipt">
+  <div class="page-content" style="max-width:520px">
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="width:80px;height:80px;border-radius:50%;background:var(--grad-success);display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 1rem;animation:sos-ring 2s infinite">✓</div>
+      <h1 style="color:var(--success);margin-bottom:.25rem">Ride Completed!</h1>
+      <p style="color:var(--text-muted)" id="receipt-date"></p>
+    </div>
+    <div class="receipt-card" style="margin-bottom:1.5rem">
+      <div class="receipt-header" style="padding:1.25rem 1.5rem;text-align:left">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="color:rgba(255,255,255,.7);font-size:.75rem;margin-bottom:.2rem">TRANSACTION ID</div><code style="color:#fff;font-size:.85rem">TXN172691640012</code></div>
+          <div style="text-align:right"><div style="color:rgba(255,255,255,.7);font-size:.75rem">PAID VIA</div><div style="font-weight:700;font-size:.9rem">UPI</div></div>
+        </div>
+      </div>
+      <div class="receipt-body">
+        <div class="receipt-row"><span style="color:var(--text-muted)">📍 From</span><span style="font-size:.85rem">MG Road Metro</span></div>
+        <div class="receipt-row"><span style="color:var(--text-muted)">🏁 To</span><span style="font-size:.85rem">Koramangala</span></div>
+        <div class="divider"></div>
+        <div class="receipt-row"><span style="color:var(--text-muted)">Base Fare</span><span>₹30</span></div>
+        <div class="receipt-row"><span style="color:var(--text-muted)">Distance (8.5km)</span><span>₹108</span></div>
+        <div class="receipt-row"><span style="color:var(--text-muted)">Time (22min)</span><span>₹33</span></div>
+        <div class="receipt-row total"><span>Total Paid</span><span class="receipt-total-amount">₹185</span></div>
+      </div>
+    </div>
+    <!-- Rating -->
+    <div class="card" style="margin-bottom:1.5rem" id="rating-section">
+      <h3 style="font-weight:700;margin-bottom:.75rem">⭐ Rate Your Driver</h3>
+      <div style="display:flex;gap:.5rem;margin-bottom:.75rem" id="star-row">
+        <button onclick="setRating(1)" class="star-btn" style="font-size:2rem;background:none;border:none;cursor:pointer;opacity:.3;transition:all .2s">⭐</button>
+        <button onclick="setRating(2)" class="star-btn" style="font-size:2rem;background:none;border:none;cursor:pointer;opacity:.3;transition:all .2s">⭐</button>
+        <button onclick="setRating(3)" class="star-btn" style="font-size:2rem;background:none;border:none;cursor:pointer;opacity:.3;transition:all .2s">⭐</button>
+        <button onclick="setRating(4)" class="star-btn" style="font-size:2rem;background:none;border:none;cursor:pointer;opacity:.3;transition:all .2s">⭐</button>
+        <button onclick="setRating(5)" class="star-btn" style="font-size:2rem;background:none;border:none;cursor:pointer;opacity:.3;transition:all .2s">⭐</button>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="submitRating()">Submit Rating</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+      <button class="btn btn-primary" onclick="showPage('booking')">🚗 Book Again</button>
+      <button class="btn btn-secondary" onclick="showPage('history')">📋 History</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     HISTORY PAGE
+═══════════════════════════════════════════ -->
+<div class="page" id="page-history">
+  <div class="page-content">
+    <h1 style="font-size:1.75rem;font-weight:700;margin-bottom:1.5rem">📋 Ride History</h1>
+    <div class="grid-4" style="margin-bottom:1.5rem">
+      <div class="stat-card"><div style="font-size:1.5rem;margin-bottom:.25rem">🚗</div><div class="stat-value" style="font-size:1.25rem">12</div><div class="stat-label">Total Rides</div></div>
+      <div class="stat-card"><div style="font-size:1.5rem;margin-bottom:.25rem">💰</div><div class="stat-value" style="font-size:1.25rem">₹2,140</div><div class="stat-label">Total Spent</div></div>
+      <div class="stat-card"><div style="font-size:1.5rem;margin-bottom:.25rem">⭐</div><div class="stat-value" style="font-size:1.25rem">4.9★</div><div class="stat-label">Avg Rating</div></div>
+      <div class="stat-card"><div style="font-size:1.5rem;margin-bottom:.25rem">❤️</div><div class="stat-value" style="font-size:.9rem">MG Rd→Kora</div><div class="stat-label">Fav Route</div></div>
+    </div>
+    <div style="display:flex;gap:.25rem;margin-bottom:1.5rem;background:var(--bg-card);padding:.25rem;border-radius:var(--radius-md);width:fit-content">
+      <button class="btn btn-sm btn-primary" id="hist-tab-all" onclick="filterHistory('all')">All</button>
+      <button class="btn btn-sm btn-ghost" id="hist-tab-completed" onclick="filterHistory('completed')">Completed</button>
+      <button class="btn btn-sm btn-ghost" id="hist-tab-cancelled" onclick="filterHistory('cancelled')">Cancelled</button>
+    </div>
+    <div id="history-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SAFETY PAGE
+═══════════════════════════════════════════ -->
+<div class="page" id="page-safety">
+  <div class="page-content">
+    <h1 style="font-size:1.75rem;font-weight:700;margin-bottom:.25rem">🛡️ Safety Center</h1>
+    <p style="color:var(--text-muted);margin-bottom:1.5rem">Your safety is our top priority</p>
+    <div class="grid-2">
+      <div style="display:flex;flex-direction:column;gap:1.5rem">
+        <!-- SOS -->
+        <div class="card" style="text-align:center">
+          <h2 style="font-weight:700;margin-bottom:.5rem">Emergency SOS</h2>
+          <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:1.5rem">One tap alerts all your trusted contacts with your live GPS location.</p>
+          <button class="btn btn-danger" id="big-sos-btn" onclick="triggerSOS()" style="width:120px;height:120px;border-radius:50%;flex-direction:column;gap:4px;font-size:1.25rem;font-weight:900;margin:0 auto;animation:sos-ring 2s infinite">
+            🆘<span style="font-size:1rem;letter-spacing:.1em">SOS</span>
+          </button>
+          <p style="color:var(--text-muted);font-size:.8rem;margin-top:1rem" id="sos-status">Tap to send emergency alert</p>
+        </div>
+        <!-- Settings -->
+        <div class="card">
+          <h3 style="font-weight:700;margin-bottom:.75rem">⚙️ Safety Settings</h3>
+          <div id="safety-toggles"></div>
+        </div>
+      </div>
+      <!-- Contacts -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+          <h3 style="font-weight:700">👥 Trusted Contacts</h3>
+          <span class="badge badge-primary" id="contacts-count">2/5</span>
+        </div>
+        <div id="contacts-list" style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1rem"></div>
+        <div id="add-contact-form" style="border-top:1px solid var(--border);padding-top:.75rem">
+          <p style="font-size:.85rem;font-weight:600;color:var(--text-secondary);margin-bottom:.75rem">+ Add Contact</p>
+          <div class="form-group"><input class="form-input" id="c-name" placeholder="Name"/></div>
+          <div class="form-group"><input class="form-input" id="c-phone" placeholder="Phone number"/></div>
+          <div class="form-group">
+            <select class="form-input" id="c-rel">
+              <option>Family</option><option>Friend</option><option>Colleague</option><option>Partner</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="addContact()">+ Add Contact</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PROFILE PAGE
+═══════════════════════════════════════════ -->
+<div class="page" id="page-profile">
+  <div class="page-content">
+    <h1 style="font-size:1.75rem;font-weight:700;margin-bottom:1.5rem">👤 My Profile</h1>
+    <div class="grid-2">
+      <div style="display:flex;flex-direction:column;gap:1.5rem">
+        <div class="card" style="text-align:center">
+          <div class="avatar avatar-xl" id="profile-avatar" style="background:var(--grad-primary);font-size:2rem;margin:0 auto 1rem">U</div>
+          <h2 id="profile-name" style="font-weight:700;margin-bottom:.25rem">User</h2>
+          <p id="profile-email" style="color:var(--text-muted);font-size:.9rem;margin-bottom:.5rem">user@email.com</p>
+          <span class="badge badge-primary" id="profile-role">rider</span>
+          <div class="grid-2" style="margin-top:1.5rem;gap:.75rem">
+            <div style="padding:.75rem;background:var(--bg-input);border-radius:var(--radius-md)"><div style="font-weight:800;font-size:1.25rem;color:var(--primary-light)">12</div><div style="font-size:.75rem;color:var(--text-muted)">Total Rides</div></div>
+            <div style="padding:.75rem;background:var(--bg-input);border-radius:var(--radius-md)"><div style="font-weight:800;font-size:1.25rem;color:var(--warning)">4.9⭐</div><div style="font-size:.75rem;color:var(--text-muted)">Rating</div></div>
+          </div>
+          <button class="btn btn-ghost btn-full" style="color:var(--danger);margin-top:1rem" onclick="doLogout()">🚪 Log Out</button>
+        </div>
+      </div>
+      <div>
+        <h3 style="font-weight:700;margin-bottom:1rem">🔔 Notifications</h3>
+        <div style="display:flex;flex-direction:column;gap:.75rem">
+          <div class="card" style="border-left:3px solid var(--primary);padding:1rem"><div style="font-weight:600;font-size:.9rem">✅ Ride Completed</div><div style="color:var(--text-muted);font-size:.8rem;margin-top:.2rem">Your ride to Koramangala was completed!</div><div style="color:var(--text-muted);font-size:.75rem;margin-top:.35rem">Today, 7:30 PM</div></div>
+          <div class="card" style="opacity:.7;border-left:3px solid transparent;padding:1rem"><div style="font-weight:600;font-size:.9rem">ℹ️ Payment Successful</div><div style="color:var(--text-muted);font-size:.8rem;margin-top:.2rem">Payment of ₹185 received via UPI</div><div style="color:var(--text-muted);font-size:.75rem;margin-top:.35rem">Yesterday, 6:15 PM</div></div>
+          <div class="card" style="opacity:.7;border-left:3px solid transparent;padding:1rem"><div style="font-weight:600;font-size:.9rem">⭐ Rating Received</div><div style="color:var(--text-muted);font-size:.8rem;margin-top:.2rem">You received a 5-star rating!</div><div style="color:var(--text-muted);font-size:.75rem;margin-top:.35rem">2 days ago</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SOS MODAL
+═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="sos-modal" style="display:none" onclick="closeSOSModal()">
+  <div class="modal" onclick="event.stopPropagation()" style="text-align:center">
+    <div id="sos-modal-content">
+      <div style="font-size:3rem;margin-bottom:1rem">🆘</div>
+      <h3 style="color:var(--danger);margin-bottom:.5rem">Send SOS Alert?</h3>
+      <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:1.5rem">This will immediately notify all your trusted contacts with your live GPS location.</p>
+      <div style="display:flex;gap:.75rem">
+        <button class="btn btn-secondary" style="flex:1" onclick="closeSOSModal()">Cancel</button>
+        <button class="btn btn-danger" style="flex:1" onclick="confirmSOS()">🆘 Send SOS</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// APP STATE
+// ═══════════════════════════════════════════
+const APP = {
+  user: null,
+  role: 'rider',
+  currentPage: 'landing',
+  bookingStep: 0,
+  pickup: null,
+  destination: null,
+  selectedRideType: 'economy',
+  fareEstimate: null,
+  maps: {},
+  markers: {},
+  driverSimInterval: null,
+  contacts: [
+    {name:'Amma', phone:'+91 98765 43210', relationship:'Family'},
+    {name:'Priya', phone:'+91 87654 32109', relationship:'Friend'},
+  ],
+  safetySettings: {autoShare:true, notifyStop:true, notifyDeviation:true},
+  historyFilter: 'all',
+  selectedPayment: 'cash',
+  userRating: 0,
+};
+
+const LOCATIONS = [
+  {address:'MG Road Metro, Bengaluru', lat:12.9757, lng:77.6049},
+  {address:'Koramangala, Bengaluru', lat:12.9352, lng:77.6245},
+  {address:'Indiranagar, Bengaluru', lat:12.9784, lng:77.6408},
+  {address:'HSR Layout, Bengaluru', lat:12.9116, lng:77.6389},
+  {address:'Whitefield, Bengaluru', lat:12.9698, lng:77.7499},
+  {address:'Electronic City, Bengaluru', lat:12.8458, lng:77.6603},
+  {address:'Jayanagar, Bengaluru', lat:12.9299, lng:77.5824},
+];
+
+const RIDE_TYPES = [
+  {id:'economy', emoji:'🚗', name:'Economy', desc:'Affordable & Comfortable', price:'₹50–150', eta:'~4 min', perKm:10},
+  {id:'comfort', emoji:'🚙', name:'Comfort', desc:'Premium Sedans', price:'₹80–250', eta:'~3 min', perKm:14},
+  {id:'premium', emoji:'🏎️', name:'Premium', desc:'Luxury Experience', price:'₹120–400', eta:'~5 min', perKm:20},
+  {id:'group', emoji:'👥', name:'Group Ride', desc:'Share & Save', price:'₹40–120', eta:'~6 min', perKm:8},
+];
+
+const MOCK_RIDES = [
+  {id:'r1', from:'MG Road Metro', to:'Koramangala', status:'completed', type:'Economy', fare:185, dist:'8.5km', date:'Today'},
+  {id:'r2', from:'Indiranagar', to:'HSR Layout', status:'completed', type:'Comfort', fare:240, dist:'11.2km', date:'Yesterday'},
+  {id:'r3', from:'Whitefield', to:'Electronic City', status:'cancelled', type:'Economy', fare:320, dist:'18.6km', date:'2 days ago'},
+  {id:'r4', from:'Koramangala', to:'Jayanagar', status:'completed', type:'Group', fare:65, dist:'5.8km', date:'3 days ago'},
+];
+
+const GROUP_RIDES = [
+  {id:'g1', from:'MG Road Metro', to:'Koramangala', time:'In 30 min', seats:2, max:3, fare:65, overlap:87, driverName:'Ravi K.', driverGender:'male', female:1, male:0},
+  {id:'g2', from:'Indiranagar', to:'HSR Layout', time:'In 1 hr', seats:2, max:4, fare:55, overlap:72, driverName:'Sunita D.', driverGender:'female', female:2, male:0},
+  {id:'g3', from:'Whitefield', to:'Electronic City', time:'In 15 min', seats:1, max:3, fare:80, overlap:91, driverName:'Arun P.', driverGender:'male', female:1, male:1},
+];
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  APP.currentPage = page;
+
+  // Update nav active states
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+  // Show SOS btn only on tracking
+  const sosBtns = document.querySelectorAll('.sos-btn');
+  sosBtns.forEach(b => b.style.display = (page === 'tracking') ? 'flex' : 'none');
+
+  // Page-specific init
+  if (page === 'booking') initBooking();
+  if (page === 'tracking') initTracking();
+  if (page === 'driver') initDriverDashboard();
+  if (page === 'group') renderGroupRides();
+  if (page === 'history') renderHistory();
+  if (page === 'safety') renderSafety();
+  if (page === 'receipt') { document.getElementById('receipt-date').textContent = new Date().toLocaleString('en-IN'); }
+  if (page === 'profile') renderProfile();
+
+  window.scrollTo(0, 0);
+}
+
+// ═══════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════
+function showToast(msg, type='info', dur=4000) {
+  const icons = {success:'✅', danger:'❌', warning:'⚠️', info:'ℹ️'};
+  const id = 'toast-' + Date.now();
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.id = id;
+  el.innerHTML = `<span style="font-size:1.2rem">${icons[type]||icons.info}</span><div style="flex:1;font-size:.9rem;color:var(--text-primary)">${msg}</div><button onclick="document.getElementById('${id}').remove()" style="color:var(--text-muted);font-size:1rem">✕</button>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), dur);
+}
+
+// ═══════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════
+let authTab = 'login', authRole = 'rider';
+
+function switchAuthTab(tab) {
+  authTab = tab;
+  document.getElementById('auth-login').style.display = tab==='login' ? 'block' : 'none';
+  document.getElementById('auth-register').style.display = tab==='register' ? 'block' : 'none';
+  document.getElementById('tab-login').className = 'tab-btn' + (tab==='login'?' active':'');
+  document.getElementById('tab-register').className = 'tab-btn' + (tab==='register'?' active':'');
+}
+
+function setRole(role) {
+  authRole = role;
+  document.getElementById('role-rider').className = role==='rider' ? 'btn btn-primary' : 'btn btn-secondary';
+  document.getElementById('role-driver').className = role==='driver' ? 'btn btn-primary' : 'btn btn-secondary';
+  document.getElementById('driver-fields').style.display = role==='driver' ? 'block' : 'none';
+}
+
+function goToAuth(role) {
+  setRole(role);
+  switchAuthTab('register');
+  showPage('auth');
+}
+
+function doLogin() {
+  const email = document.getElementById('login-email').value;
+  const pass = document.getElementById('login-password').value;
+  if (!email || !pass) { showError('login-error','Please fill in all fields'); return; }
+  const btn = document.getElementById('login-btn');
+  btn.innerHTML = '<span class="spinner" style="width:18px;height:18px"></span> Signing in...';
+  btn.disabled = true;
+  setTimeout(() => {
+    APP.user = {name: email.split('@')[0], email, role:'rider'};
+    APP.role = 'rider';
+    showNavForRole('rider');
+    showPage('booking');
+    showToast('Welcome back! 🎉','success');
+    btn.innerHTML = 'Sign In'; btn.disabled = false;
+  }, 1200);
+}
+
+function doRegister() {
+  const name = document.getElementById('reg-name').value;
+  const email = document.getElementById('reg-email').value;
+  if (!name || !email) { showError('reg-error','Please fill in all fields'); return; }
+  setTimeout(() => {
+    APP.user = {name, email, role: authRole, gender: document.getElementById('reg-gender').value};
+    APP.role = authRole;
+    showNavForRole(authRole);
+    showPage(authRole === 'driver' ? 'driver' : 'booking');
+    showToast('Account created! Welcome to Travix2 🚖','success');
+  }, 1000);
+}
+
+function doLogout() {
+  APP.user = null; APP.role = 'rider';
+  document.getElementById('nav-links-public').style.display = 'flex';
+  document.getElementById('nav-links-rider').style.display = 'none';
+  document.getElementById('nav-links-driver').style.display = 'none';
+  showPage('landing');
+  showToast('Logged out successfully','info');
+}
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 4000);
+}
+
+function showNavForRole(role) {
+  document.getElementById('nav-links-public').style.display = 'none';
+  document.getElementById('nav-links-rider').style.display = role==='rider' ? 'flex' : 'none';
+  document.getElementById('nav-links-driver').style.display = role==='driver' ? 'flex' : 'none';
+  if (role==='rider' && APP.user) document.getElementById('rider-avatar').textContent = APP.user.name[0].toUpperCase();
+  if (role==='driver' && APP.user) document.getElementById('driver-avatar').textContent = APP.user.name[0].toUpperCase();
+}
+
+// ═══════════════════════════════════════════
+// MAP HELPERS
+// ═══════════════════════════════════════════
+function makeMap(id, center=[12.9716,77.5946], zoom=13) {
+  if (APP.maps[id]) { APP.maps[id].remove(); }
+  const map = L.map(id, {zoomControl:true}).setView(center, zoom);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution:'© OpenStreetMap',maxZoom:19
+  }).addTo(map);
+  APP.maps[id] = map;
+  return map;
+}
+
+function makeIcon(color, size=16) {
+  return L.divIcon({className:'',iconSize:[size,size],iconAnchor:[size/2,size/2],
+    html:`<div style="width:${size}px;height:${size}px;background:${color};border:3px solid #fff;border-radius:50%;box-shadow:0 0 12px ${color}"></div>`});
+}
+
+function fitMap(map, points) {
+  const valid = points.filter(p => p);
+  if (valid.length > 1) map.fitBounds(valid, {padding:[40,40]});
+  else if (valid.length === 1) map.setView(valid[0], 14);
+}
+
+// ═══════════════════════════════════════════
+// BOOKING
+// ═══════════════════════════════════════════
+const STEPS_LABELS = ['Pickup','Destination','Ride Type','Fare','Confirm'];
+
+function initBooking() {
+  APP.bookingStep = 0;
+  renderBookingStep();
+  setTimeout(() => {
+    if (!APP.maps['booking-map']) {
+      const m = makeMap('booking-map');
+      APP.maps['booking-map'] = m;
+    }
+  }, 100);
+}
+
+function renderStepTracker() {
+  const el = document.getElementById('step-tracker');
+  el.innerHTML = STEPS_LABELS.map((l,i) => {
+    const cls = i < APP.bookingStep ? 'done' : i === APP.bookingStep ? 'active' : '';
+    const connector = i < STEPS_LABELS.length-1 ? `<div class="step-connector ${i < APP.bookingStep ? 'done' : ''}"></div>` : '';
+    return `<div style="display:flex;align-items:center;flex:1"><div class="step-circle ${cls}">${i < APP.bookingStep ? '✓' : i+1}</div><span class="step-label ${cls==='active'?'active':''}">${l}</span>${connector}</div>`;
+  }).join('');
+}
+
+function renderBookingStep() {
+  renderStepTracker();
+  const el = document.getElementById('booking-step-content');
+
+  if (APP.bookingStep === 0) {
+    el.innerHTML = `
+      <h2 style="font-size:1.5rem;font-weight:700;margin-bottom:.5rem">📍 Where are you?</h2>
+      <p style="color:var(--text-muted);margin-bottom:1.5rem">Set your pickup location</p>
+      <div class="form-group">
+        <label class="form-label">Pickup Address</label>
+        <input class="form-input" id="pickup-input" placeholder="Search or select location..." oninput="filterLocations(this.value,'pickup-sug')"/>
+        <div id="pickup-sug" style="display:none" class="card" style="padding:.5rem;margin-top:0;border-top-left-radius:0;border-top-right-radius:0"></div>
+      </div>
+      <button class="btn btn-secondary btn-full" onclick="useMyLocation()" style="margin-bottom:1rem">📡 Use My Location</button>
+      <p class="form-label" style="margin-bottom:.5rem">Popular:</p>
+      <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.5rem">
+        ${LOCATIONS.slice(0,4).map(l=>`<button class="btn btn-secondary btn-sm" onclick="selectPickup(${JSON.stringify(l)})">${l.address.split(',')[0]}</button>`).join('')}
+      </div>
+      ${APP.pickup ? `<div class="card" style="background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.3);margin-bottom:1rem"><span style="color:var(--success)">✅ ${APP.pickup.address}</span></div>` : ''}
+      <button class="btn btn-primary btn-full btn-lg" onclick="APP.bookingStep=1;renderBookingStep()" ${!APP.pickup?'disabled':''}>Next →</button>`;
+  }
+
+  else if (APP.bookingStep === 1) {
+    el.innerHTML = `
+      <h2 style="font-size:1.5rem;font-weight:700;margin-bottom:.5rem">🏁 Where to?</h2>
+      <p style="color:var(--text-muted);margin-bottom:1.5rem">Set your destination</p>
+      <div class="form-group">
+        <label class="form-label">Destination</label>
+        <input class="form-input" id="dest-input" placeholder="Search destination..." oninput="filterLocations(this.value,'dest-sug')"/>
+        <div id="dest-sug" style="display:none" class="card" style="padding:.5rem;margin-top:0"></div>
+      </div>
+      <p class="form-label" style="margin-bottom:.5rem;margin-top:.5rem">Popular:</p>
+      <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.5rem">
+        ${LOCATIONS.slice(1).map(l=>`<button class="btn btn-secondary btn-sm" onclick="selectDest(${JSON.stringify(l)})">${l.address.split(',')[0]}</button>`).join('')}
+      </div>
+      ${APP.destination ? `<div class="card" style="background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3);margin-bottom:1rem"><span style="color:var(--danger)">🏁 ${APP.destination.address}</span></div>` : ''}
+      <div style="display:flex;gap:.75rem">
+        <button class="btn btn-secondary" style="flex:1" onclick="APP.bookingStep=0;renderBookingStep()">← Back</button>
+        <button class="btn btn-primary" style="flex:2" onclick="APP.bookingStep=2;renderBookingStep()" ${!APP.destination?'disabled':''}>Next →</button>
+      </div>`;
+  }
+
+  else if (APP.bookingStep === 2) {
+    el.innerHTML = `
+      <h2 style="font-size:1.5rem;font-weight:700;margin-bottom:.5rem">🚗 Choose Ride</h2>
+      <p style="color:var(--text-muted);margin-bottom:1.5rem">Select your ride type</p>
+      <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.5rem">
+        ${RIDE_TYPES.map(rt=>`
+          <button class="ride-type-card ${APP.selectedRideType===rt.id?'selected':''}" onclick="APP.selectedRideType='${rt.id}';renderBookingStep()">
+            <span style="font-size:2rem">${rt.emoji}</span>
+            <div style="text-align:left">
+              <div style="font-weight:700;font-size:1rem">${rt.name}</div>
+              <div style="font-size:.8rem;color:var(--text-muted)">${rt.desc} · ${rt.eta}</div>
+            </div>
+            <span style="margin-left:auto;font-weight:800;font-size:1.1rem;color:var(--primary-light)">${rt.price}</span>
+          </button>`).join('')}
+      </div>
+      <div style="display:flex;gap:.75rem">
+        <button class="btn btn-secondary" style="flex:1" onclick="APP.bookingStep=1;renderBookingStep()">← Back</button>
+        <button class="btn btn-primary" style="flex:2" onclick="calcFare()">See Fare →</button>
+      </div>`;
+  }
+
+  else if (APP.bookingStep === 3) {
+    const fare = APP.fareEstimate || {base:30,dist:85,time:33,total:148};
+    el.innerHTML = `
+      <h2 style="font-size:1.5rem;font-weight:700;margin-bottom:.5rem">💰 Fare Summary</h2>
+      <div class="route-visual" style="margin-bottom:1rem">
+        <div class="route-point"><div class="route-dot pickup"></div><div><div style="font-size:.7rem;color:var(--text-muted)">PICKUP</div><div style="font-weight:600;font-size:.875rem">${APP.pickup?.address}</div></div></div>
+        <div class="route-line"></div>
+        <div class="route-point"><div class="route-dot dest"></div><div><div style="font-size:.7rem;color:var(--text-muted)">DESTINATION</div><div style="font-weight:600;font-size:.875rem">${APP.destination?.address}</div></div></div>
+      </div>
+      <div class="card" style="margin-bottom:1rem">
+        <div style="font-weight:700;margin-bottom:.75rem">${RIDE_TYPES.find(r=>r.id===APP.selectedRideType)?.emoji} ${RIDE_TYPES.find(r=>r.id===APP.selectedRideType)?.name}</div>
+        <div class="receipt-row"><span style="color:var(--text-muted)">Base Fare</span><span>₹${fare.base}</span></div>
+        <div class="receipt-row"><span style="color:var(--text-muted)">Distance (${fare.distKm||8.5}km)</span><span>₹${fare.dist}</span></div>
+        <div class="receipt-row"><span style="color:var(--text-muted)">Time (${fare.durMin||22}min)</span><span>₹${fare.time}</span></div>
+        <div class="receipt-row"><span style="color:var(--text-muted)">Surge</span><span>1.0x</span></div>
+        <div class="receipt-row" style="font-size:1.1rem;font-weight:700;border-top:2px solid var(--border);padding-top:.75rem;margin-top:.5rem"><span>Total</span><span style="font-size:1.5rem;color:var(--primary-light);font-weight:800">₹${fare.total}</span></div>
+      </div>
+      <div style="display:flex;gap:.75rem">
+        <button class="btn btn-secondary" style="flex:1" onclick="APP.bookingStep=2;renderBookingStep()">← Back</button>
+        <button class="btn btn-primary" style="flex:2" onclick="confirmBooking()">✅ Confirm Booking</button>
+      </div>`;
+  }
+
+  else if (APP.bookingStep === 4) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:2rem 0" id="searching-state">
+        <div style="position:relative;width:80px;height:80px;margin:0 auto 1.5rem">
+          <div class="spinner spinner-lg" style="position:absolute;inset:0;margin:auto"></div>
+          <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:2rem">🚗</span>
+        </div>
+        <h2 style="background:var(--grad-primary);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.5rem">Finding your driver...</h2>
+        <p style="color:var(--text-muted)">Matching you with the nearest driver</p>
+      </div>`;
+    setTimeout(() => {
+      document.getElementById('searching-state').innerHTML = `
+        <div style="font-size:4rem;animation:float 2s ease-in-out infinite;margin-bottom:1rem">✅</div>
+        <h2 style="color:var(--success);margin-bottom:1rem">Driver Matched!</h2>
+        <div class="card" style="text-align:left;margin-bottom:1.5rem">
+          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+            <div class="avatar avatar-lg" style="background:var(--grad-primary);font-size:1.5rem">R</div>
+            <div>
+              <div style="font-weight:700">Ravi Kumar</div>
+              <div style="color:var(--text-muted);font-size:.875rem">⭐ 4.9 · Honda City · KA-01-AB-1234</div>
+            </div>
+            <span class="badge badge-success" style="margin-left:auto">4 min away</span>
+          </div>
+          <p style="font-size:.875rem;color:var(--text-secondary)">White Honda City · KA-01-AB-1234</p>
+        </div>
+        <button class="btn btn-primary btn-full btn-lg" onclick="showPage('tracking')">🗺️ Track Your Ride</button>`;
+    }, 3500);
+  }
+}
+
+function filterLocations(val, sugId) {
+  const sug = document.getElementById(sugId);
+  if (!val || val.length < 1) { sug.style.display='none'; return; }
+  const matches = LOCATIONS.filter(l => l.address.toLowerCase().includes(val.toLowerCase()));
+  if (!matches.length) { sug.style.display='none'; return; }
+  sug.style.display = 'block';
+  sug.innerHTML = matches.map(l =>
+    `<div onclick="${sugId==='pickup-sug'?`selectPickup(${JSON.stringify(l)})`:`selectDest(${JSON.stringify(l)})`}" style="padding:.6rem .75rem;cursor:pointer;border-radius:var(--radius-sm);color:var(--text-primary);font-size:.875rem" onmouseover="this.style.background='var(--bg-card-hover)'" onmouseout="this.style.background='none'">📍 ${l.address}</div>`
+  ).join('');
+}
+
+function selectPickup(loc) {
+  APP.pickup = loc;
+  updateBookingMap();
+  renderBookingStep();
+}
+
+function selectDest(loc) {
+  APP.destination = loc;
+  updateBookingMap();
+  renderBookingStep();
+}
+
+function useMyLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => { selectPickup({address:'My Current Location', lat:pos.coords.latitude, lng:pos.coords.longitude}); },
+      () => { selectPickup(LOCATIONS[0]); showToast('Using default location','info'); }
+    );
+  } else { selectPickup(LOCATIONS[0]); }
+}
+
+function updateBookingMap() {
+  const map = APP.maps['booking-map'];
+  if (!map) return;
+  if (APP.markers['pickup']) { map.removeLayer(APP.markers['pickup']); }
+  if (APP.markers['destination']) { map.removeLayer(APP.markers['destination']); }
+  if (APP.markers['route-line']) { map.removeLayer(APP.markers['route-line']); }
+  if (APP.pickup) {
+    APP.markers['pickup'] = L.marker([APP.pickup.lat, APP.pickup.lng], {icon: makeIcon('#10B981')}).addTo(map).bindPopup('📍 ' + APP.pickup.address);
+  }
+  if (APP.destination) {
+    APP.markers['destination'] = L.marker([APP.destination.lat, APP.destination.lng], {icon: makeIcon('#EF4444')}).addTo(map).bindPopup('🏁 ' + APP.destination.address);
+  }
+  if (APP.pickup && APP.destination) {
+    APP.markers['route-line'] = L.polyline([[APP.pickup.lat, APP.pickup.lng],[APP.destination.lat, APP.destination.lng]], {color:'#7C3AED', weight:4, dashArray:'10,8', opacity:.8}).addTo(map);
+    map.fitBounds([[APP.pickup.lat,APP.pickup.lng],[APP.destination.lat,APP.destination.lng]], {padding:[40,40]});
+  } else if (APP.pickup) {
+    map.setView([APP.pickup.lat, APP.pickup.lng], 14);
+  }
+}
+
+function calcFare() {
+  const p = APP.pickup, d = APP.destination;
+  const distKm = p && d ? Math.round(Math.sqrt(Math.pow((p.lat-d.lat)*111,2)+Math.pow((p.lng-d.lng)*111,2))*10)/10 || 5 : 5;
+  const durMin = Math.round(distKm * 2.5);
+  const rt = RIDE_TYPES.find(r => r.id === APP.selectedRideType);
+  const base = rt.id==='economy'?30:rt.id==='comfort'?50:rt.id==='premium'?80:20;
+  const dist = Math.round(distKm * rt.perKm);
+  const time = Math.round(durMin * 1.5);
+  const total = Math.max(base+dist+time, 50);
+  APP.fareEstimate = {base, dist, time, total, distKm, durMin};
+  APP.bookingStep = 3;
+  renderBookingStep();
+}
+
+function confirmBooking() {
+  APP.bookingStep = 4;
+  renderBookingStep();
+}
+
+// ═══════════════════════════════════════════
+// TRACKING
+// ═══════════════════════════════════════════
+let driverPos = {lat:12.978, lng:77.608};
+let driverMarker = null;
+
+function initTracking() {
+  setTimeout(() => {
+    const map = makeMap('tracking-map', [12.9616, 77.614], 13);
+    const p = APP.pickup || LOCATIONS[0];
+    const d = APP.destination || LOCATIONS[1];
+
+    L.marker([p.lat, p.lng], {icon:makeIcon('#10B981')}).addTo(map).bindPopup('📍 Pickup');
+    L.marker([d.lat, d.lng], {icon:makeIcon('#EF4444')}).addTo(map).bindPopup('🏁 Drop');
+    L.polyline([[p.lat,p.lng],[d.lat,d.lng]], {color:'#7C3AED',weight:4,dashArray:'10,8',opacity:.8}).addTo(map);
+
+    driverPos = {lat: p.lat + 0.004, lng: p.lng + 0.002};
+    driverMarker = L.marker([driverPos.lat, driverPos.lng], {icon:makeIcon('#7C3AED', 20)}).addTo(map).bindPopup('🚗 Your Driver');
+    map.fitBounds([[p.lat,p.lng],[d.lat,d.lng]], {padding:[40,40]});
+
+    // Simulate driver moving
+    clearInterval(APP.driverSimInterval);
+    APP.driverSimInterval = setInterval(() => {
+      driverPos.lat += (p.lat - driverPos.lat) * 0.05;
+      driverPos.lng += (p.lng - driverPos.lng) * 0.05;
+      driverMarker?.setLatLng([driverPos.lat, driverPos.lng]);
+    }, 2000);
+  }, 150);
+
+  // Status badge
+  document.getElementById('tracking-status-badge').innerHTML = `
+    <div class="card" style="display:flex;align-items:center;gap:.75rem;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3)">
+      <span style="font-size:1.75rem">🚗</span>
+      <div><div style="font-weight:700;color:var(--primary-light)">Driver On the Way</div><div style="font-size:.8rem;color:var(--text-muted)">ETA: 4 min</div></div>
+    </div>`;
+
+  document.getElementById('tracking-driver-card').innerHTML = `
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:.75rem">
+      <div class="avatar avatar-lg" style="background:var(--grad-primary);font-size:1.5rem">R</div>
+      <div style="flex:1"><div style="font-weight:700">Ravi Kumar</div><div class="stars">★★★★★</div><div style="color:var(--text-muted);font-size:.8rem">+91 98765 43210</div></div>
+    </div>
+    <div style="background:var(--bg-input);border-radius:var(--radius-md);padding:.75rem;font-size:.875rem;color:var(--text-secondary)">🚗 White Honda City · <strong style="color:var(--text-primary)">KA-01-AB-1234</strong></div>`;
+
+  document.getElementById('tracking-route').innerHTML = `
+    <div class="route-visual">
+      <div class="route-point"><div class="route-dot pickup"></div><div><div style="font-size:.7rem;color:var(--text-muted)">PICKUP</div><div style="font-weight:600;font-size:.85rem">${APP.pickup?.address||'MG Road Metro'}</div></div></div>
+      <div class="route-line"></div>
+      <div class="route-point"><div class="route-dot dest"></div><div><div style="font-size:.7rem;color:var(--text-muted)">DESTINATION</div><div style="font-weight:600;font-size:.85rem">${APP.destination?.address||'Koramangala'}</div></div></div>
+    </div>`;
+
+  document.getElementById('tracking-pin-box').innerHTML = `
+    <div class="card" style="text-align:center;border:2px solid var(--primary);background:rgba(124,58,237,.08)">
+      <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:.5rem">🔐 Your Ride PIN — Share with driver</p>
+      <div style="display:flex;justify-content:center;gap:.5rem">
+        ${['4','7','2','9'].map(d=>`<div style="width:48px;height:56px;display:flex;align-items:center;justify-content:center;background:var(--bg-input);border:2px solid var(--primary);border-radius:var(--radius-md);font-size:1.75rem;font-weight:800;color:var(--primary-light)">${d}</div>`).join('')}
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════
+// DRIVER DASHBOARD
+// ═══════════════════════════════════════════
+let driverOnline = false;
+const MOCK_REQUESTS = [
+  {id:'req1', pickup:'MG Road Metro', dest:'Koramangala', fare:185, type:'Economy', dist:'8.5km', rider:'Priya S.'},
+  {id:'req2', pickup:'Indiranagar', dest:'HSR Layout', fare:240, type:'Comfort', dist:'11.2km', rider:'Arjun M.'},
+  {id:'req3', pickup:'Whitefield', dest:'Electronic City', fare:320, type:'Premium', dist:'18.6km', rider:'Sneha R.'},
+];
+
+function initDriverDashboard() {
+  setTimeout(() => {
+    const m = makeMap('driver-map', [12.9716, 77.5946], 13);
+    L.marker([12.9716, 77.5946], {icon:makeIcon('#7C3AED', 20)}).addTo(m).bindPopup('📍 Your Location');
+    APP.maps['driver-map'] = m;
+  }, 150);
+  renderDriverSidebar();
+}
+
+function renderDriverSidebar() {
+  const name = APP.user?.name || 'Driver';
+  const sidebar = document.getElementById('driver-sidebar');
+  sidebar.innerHTML = `
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
+      <div class="avatar avatar-lg" style="background:var(--grad-primary);font-size:1.5rem">${name[0].toUpperCase()}</div>
+      <div><div style="font-weight:700">${name}</div><div style="font-size:.8rem;color:var(--text-muted)">Honda City · KA-01-AB-1234</div><div class="stars" style="font-size:.85rem">★ 4.9</div></div>
+    </div>
+    <button onclick="toggleDriverOnline()" class="btn btn-full btn-lg ${driverOnline?'btn-danger':'btn-success'}" style="margin-bottom:1.5rem;display:flex;align-items:center;justify-content:center;gap:.5rem">
+      <span class="status-dot ${driverOnline?'online':'offline'}"></span>${driverOnline?'Go Offline':'Go Online'}
+    </button>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:1.5rem">
+      <div class="stat-card" style="padding:.75rem .5rem"><div class="stat-value" style="font-size:1.25rem">7</div><div class="stat-label" style="font-size:.65rem">Rides</div></div>
+      <div class="stat-card" style="padding:.75rem .5rem"><div class="stat-value" style="font-size:1.25rem">₹1,840</div><div class="stat-label" style="font-size:.65rem">Earned</div></div>
+      <div class="stat-card" style="padding:.75rem .5rem"><div class="stat-value" style="font-size:1.25rem">4.9★</div><div class="stat-label" style="font-size:.65rem">Rating</div></div>
+    </div>
+    <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem">🚦 Ride Requests ${driverOnline?'<span class="badge badge-primary" style="margin-left:.5rem">'+MOCK_REQUESTS.length+'</span>':''}</h3>
+    ${!driverOnline ? '<div style="text-align:center;padding:2rem 1rem;color:var(--text-muted)"><div style="font-size:2.5rem;margin-bottom:.75rem">💤</div><p>Go online to receive ride requests.</p></div>' :
+      MOCK_REQUESTS.map(r => `
+        <div class="card" style="padding:1rem;margin-bottom:.75rem;border:1px solid var(--border-strong)">
+          <div style="display:flex;justify-content:space-between;margin-bottom:.75rem">
+            <span class="badge badge-primary">${r.type.toUpperCase()}</span>
+            <span style="font-weight:800;color:var(--success);font-size:1.1rem">₹${r.fare}</span>
+          </div>
+          <div style="font-size:.85rem;margin-bottom:.25rem"><span style="color:var(--success)">●</span> ${r.pickup}</div>
+          <div style="font-size:.85rem;margin-bottom:.75rem"><span style="color:var(--danger)">●</span> ${r.dest}</div>
+          <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:.75rem">${r.dist} · Rider: ${r.rider}</div>
+          <div style="display:flex;gap:.5rem">
+            <button class="btn btn-ghost btn-sm" style="flex:1;border:1px solid var(--border)" onclick="declineRequest('${r.id}')">Decline</button>
+            <button class="btn btn-success btn-sm" style="flex:2" onclick="acceptRequest('${r.id}')">✓ Accept</button>
+          </div>
+        </div>`).join('')}`;
+}
+
+function toggleDriverOnline() {
+  driverOnline = !driverOnline;
+  showToast(driverOnline ? '🟢 You are now online!' : '🔴 You are now offline', driverOnline ? 'success' : 'info');
+  renderDriverSidebar();
+}
+
+function acceptRequest(id) {
+  showToast('Ride accepted! Navigate to pickup.','success');
+  setTimeout(() => showPage('booking'), 1500); // demo
+}
+
+function declineRequest(id) {
+  showToast('Ride declined','info');
+  renderDriverSidebar();
+}
+
+// ═══════════════════════════════════════════
+// GROUP RIDES
+// ═══════════════════════════════════════════
+const joinedGroups = new Set();
+
+function searchGroupRides() {
+  renderGroupRides(true);
+}
+
+function renderGroupRides(searched=true) {
+  const el = document.getElementById('group-rides-list');
+  if (!searched) {
+    el.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text-muted)"><div style="font-size:3rem;margin-bottom:1rem">👥</div><p>Enter pickup and destination to find matching group rides</p></div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <h2 style="font-size:1.1rem;font-weight:700">3 matches found</h2>
+      <span class="badge badge-success">🟢 Smart Matching Active</span>
+    </div>
+    ${GROUP_RIDES.map(g => {
+      const isJoined = joinedGroups.has(g.id);
+      const driverBadge = g.driverGender === 'female' ? '<span class="badge badge-female">👩 Female Driver</span>' : '<span class="badge badge-male">👨 Male Driver</span>';
+      const compBadge = g.male===0 ? '<span class="badge badge-female">🟣 Women Only</span>' : g.female===0 ? '<span class="badge badge-male">🔵 Men Only</span>' : '<span class="badge badge-mixed">🟡 Mixed Group</span>';
+      const fPct = Math.round((g.female/(g.female+g.male||1))*100);
+      const mPct = 100-fPct;
+      return `
+        <div class="card card-hover" style="margin-bottom:1rem;padding:1.25rem">
+          <div style="display:flex;justify-content:space-between;margin-bottom:.75rem">
+            <div style="display:flex;flex-wrap:wrap;gap:.4rem">
+              <span class="badge" style="background:${g.overlap>80?'rgba(16,185,129,.2)':'rgba(245,158,11,.2)'};color:${g.overlap>80?'var(--success)':'var(--warning)'};border:1px solid ${g.overlap>80?'rgba(16,185,129,.4)':'rgba(245,158,11,.4)'}">🛣️ ${g.overlap}% Route Match</span>
+              <span class="badge badge-primary">🕒 ${g.time}</span>
+            </div>
+            <div style="text-align:right"><div style="font-size:1.5rem;font-weight:800;color:var(--success)">₹${g.fare}</div><div style="font-size:.75rem;color:var(--text-muted)">per rider</div></div>
+          </div>
+          <div style="font-size:.875rem;margin-bottom:.75rem">
+            <span style="color:var(--success)">●</span> ${g.from} <span style="margin:0 .4rem;color:var(--text-muted)">→</span> <span style="color:var(--danger)">●</span> ${g.to}
+          </div>
+          <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.75rem">${compBadge}${driverBadge}</div>
+          <div class="gender-bar">
+            <div class="gender-bar-f" style="width:${fPct}%"></div>
+            <div class="gender-bar-m" style="width:${mPct}%"></div>
+          </div>
+          <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:.75rem">${g.female} female · ${g.male} male · ${g.seats} seat${g.seats!==1?'s':''} left of ${g.max}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:.85rem;color:var(--text-muted)">Driver: ${g.driverName} ⭐ 4.9</span>
+            ${isJoined ? '<span class="badge badge-success" style="padding:.5rem 1rem">✅ Joined!</span>' : `<button class="btn btn-primary btn-sm" onclick="joinGroupRide('${g.id}')">Join Ride</button>`}
+          </div>
+        </div>`;
+    }).join('')}
+    <div style="text-align:center;padding:1.5rem;background:var(--bg-card);border-radius:var(--radius-lg);border:1px dashed var(--border)">
+      <p style="color:var(--text-muted);margin-bottom:.75rem">Can't find a matching group ride?</p>
+      <button class="btn btn-secondary" onclick="showPage('booking')">Book a Solo Ride →</button>
+    </div>`;
+}
+
+function joinGroupRide(id) {
+  joinedGroups.add(id);
+  renderGroupRides(true);
+  showToast('Successfully joined the group ride! 🎉','success');
+}
+
+// ═══════════════════════════════════════════
+// PAYMENT
+// ═══════════════════════════════════════════
+function selectPayment(method) {
+  APP.selectedPayment = method;
+  ['cash','card','upi','wallet'].forEach(m => {
+    const el = document.getElementById('pm-' + m);
+    el.style.borderColor = m===method ? 'var(--primary)' : 'var(--border)';
+    el.style.boxShadow = m===method ? 'var(--shadow-primary)' : 'none';
+    el.style.background = m===method ? 'linear-gradient(145deg,#16161F,#1E143A)' : 'var(--bg-card)';
+  });
+  const extra = document.getElementById('payment-extra');
+  if (method==='card') {
+    extra.innerHTML = `<div class="card" style="display:flex;flex-direction:column;gap:.75rem;padding:1rem">
+      <input class="form-input" placeholder="Card Number (16 digits)" maxlength="16"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+        <input class="form-input" placeholder="MM/YY" maxlength="5"/>
+        <input class="form-input" placeholder="CVV" type="password" maxlength="3"/>
+      </div></div>`;
+  } else if (method==='upi') {
+    extra.innerHTML = `<input class="form-input" placeholder="UPI ID (e.g. name@okicici)"/>`;
+  } else if (method==='wallet') {
+    extra.innerHTML = `<div class="card" style="display:flex;align-items:center;gap:.75rem;padding:1rem"><span style="font-size:1.5rem">👛</span><div><div style="font-weight:700">Travix Wallet</div><div style="color:var(--success);font-weight:700">Balance: ₹500</div></div></div>`;
+  } else {
+    extra.innerHTML = `<p style="font-size:.8rem;color:var(--text-muted)">Please keep exact change of ₹185 ready for the driver.</p>`;
+  }
+}
+
+function processPayment() {
+  const btn = document.getElementById('pay-btn');
+  const processing = document.getElementById('payment-processing');
+  btn.style.display = 'none';
+  processing.style.display = 'block';
+  setTimeout(() => { showPage('receipt'); showToast('Payment successful! ✅','success'); }, 2000);
+}
+
+// ═══════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════
+function filterHistory(filter) {
+  APP.historyFilter = filter;
+  ['all','completed','cancelled'].forEach(f => {
+    const el = document.getElementById('hist-tab-' + f);
+    if(el) el.className = 'btn btn-sm ' + (f===filter?'btn-primary':'btn-ghost');
+  });
+  renderHistory();
+}
+
+function renderHistory() {
+  const rides = MOCK_RIDES.filter(r => APP.historyFilter==='all' || r.status===APP.historyFilter);
+  const statusConfig = {
+    completed:{cls:'badge-success',icon:'✅',label:'Completed'},
+    cancelled:{cls:'badge-danger',icon:'❌',label:'Cancelled'},
+  };
+  document.getElementById('history-list').innerHTML = rides.length === 0 ?
+    `<div style="text-align:center;padding:3rem;color:var(--text-muted)"><div style="font-size:3rem;margin-bottom:1rem">🚗</div><p>No rides found</p><button class="btn btn-primary" style="margin-top:1rem" onclick="showPage('booking')">Book a Ride</button></div>` :
+    rides.map(r => {
+      const sc = statusConfig[r.status] || statusConfig.completed;
+      return `
+        <div class="card" style="margin-bottom:1rem;padding:1.25rem;cursor:pointer" onclick="this.querySelector('.ride-details').style.display=this.querySelector('.ride-details').style.display==='none'?'block':'none'">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem">
+            <div>
+              <div style="font-weight:600;font-size:.9rem;margin-bottom:.25rem">${r.from} → ${r.to}</div>
+              <div style="color:var(--text-muted);font-size:.8rem">${r.date} · ${r.dist} · ${r.type}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.35rem">
+              <span class="badge ${sc.cls}">${sc.icon} ${sc.label}</span>
+              <span style="font-weight:700;font-size:1rem;color:var(--primary-light)">₹${r.fare}</span>
+            </div>
+          </div>
+          <div class="ride-details" style="display:none;border-top:1px solid var(--border);padding-top:.75rem;margin-top:.5rem">
+            <div class="route-visual" style="margin-bottom:.75rem">
+              <div class="route-point" style="padding:.5rem"><div class="route-dot pickup"></div><span style="font-size:.8rem">${r.from}</span></div>
+              <div class="route-line"></div>
+              <div class="route-point" style="padding:.5rem"><div class="route-dot dest"></div><span style="font-size:.8rem">${r.to}</span></div>
+            </div>
+            ${r.status==='completed'?`<button class="btn btn-secondary btn-sm btn-full" onclick="showPage('receipt')">📄 View Receipt</button>`:''}
+          </div>
+        </div>`;
+    }).join('');
+}
+
+// ═══════════════════════════════════════════
+// SAFETY
+// ═══════════════════════════════════════════
+function renderSafety() {
+  renderContacts();
+  renderSafetyToggles();
+}
+
+function renderContacts() {
+  const list = document.getElementById('contacts-list');
+  const count = document.getElementById('contacts-count');
+  if (!list) return;
+  count.textContent = APP.contacts.length + '/5';
+  list.innerHTML = APP.contacts.map((c, i) => `
+    <div style="display:flex;align-items:center;gap:.75rem;padding:.75rem;background:var(--bg-input);border-radius:var(--radius-md)">
+      <div class="avatar" style="background:var(--grad-primary);font-size:.875rem">${c.name[0].toUpperCase()}</div>
+      <div style="flex:1"><div style="font-weight:600;font-size:.9rem">${c.name}</div><div style="color:var(--text-muted);font-size:.8rem">${c.phone} · ${c.relationship}</div></div>
+      <button onclick="removeContact(${i})" style="color:var(--danger);background:none;border:none;cursor:pointer;font-size:1.1rem">✕</button>
+    </div>`).join('');
+}
+
+function renderSafetyToggles() {
+  const el = document.getElementById('safety-toggles');
+  if (!el) return;
+  const settings = [
+    {key:'autoShare', label:'🔗 Auto-share location when ride starts'},
+    {key:'notifyStop', label:'🛑 Alert contacts for 10-min stops'},
+    {key:'notifyDeviation', label:'⚠️ Alert contacts for route deviations'},
+  ];
+  el.innerHTML = settings.map(s => {
+    const on = APP.safetySettings[s.key];
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:.875rem 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:.9rem">${s.label}</span>
+        <div class="toggle-switch ${on?'on':''}" onclick="toggleSafety('${s.key}')">
+          <div class="toggle-knob"></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleSafety(key) {
+  APP.safetySettings[key] = !APP.safetySettings[key];
+  renderSafetyToggles();
+  showToast(APP.safetySettings[key] ? 'Setting enabled' : 'Setting disabled', 'info');
+}
+
+function addContact() {
+  const name = document.getElementById('c-name').value;
+  const phone = document.getElementById('c-phone').value;
+  const rel = document.getElementById('c-rel').value;
+  if (!name || !phone) { showToast('Name and phone are required','warning'); return; }
+  if (APP.contacts.length >= 5) { showToast('Maximum 5 contacts allowed','warning'); return; }
+  APP.contacts.push({name, phone, relationship:rel});
+  document.getElementById('c-name').value = '';
+  document.getElementById('c-phone').value = '';
+  renderContacts();
+  showToast('Contact added!','success');
+}
+
+function removeContact(i) {
+  APP.contacts.splice(i, 1);
+  renderContacts();
+  showToast('Contact removed','info');
+}
+
+// ═══════════════════════════════════════════
+// SOS
+// ═══════════════════════════════════════════
+function triggerSOS() {
+  document.getElementById('sos-modal').style.display = 'flex';
+}
+
+function closeSOSModal() {
+  document.getElementById('sos-modal').style.display = 'none';
+}
+
+function confirmSOS() {
+  document.getElementById('sos-modal-content').innerHTML = `
+    <div class="spinner spinner-lg" style="margin:0 auto 1rem"></div>
+    <p style="color:var(--text-muted)">Sending SOS to ${APP.contacts.length} contacts...</p>`;
+  setTimeout(() => {
+    document.getElementById('sos-modal-content').innerHTML = `
+      <div style="font-size:3rem;margin-bottom:1rem">✅</div>
+      <h3 style="color:var(--success);margin-bottom:.5rem">SOS Sent!</h3>
+      <p style="margin-bottom:1.5rem;color:var(--text-muted)">${APP.contacts.length} trusted contact${APP.contacts.length!==1?'s':''} notified with your live location.</p>
+      <button class="btn btn-secondary btn-full" onclick="closeSOSModal()">Close</button>`;
+    const sos = document.getElementById('sos-status');
+    if (sos) sos.textContent = '✅ SOS sent to ' + APP.contacts.length + ' contacts';
+  }, 1800);
+}
+
+// ═══════════════════════════════════════════
+// RATING
+// ═══════════════════════════════════════════
+function setRating(r) {
+  APP.userRating = r;
+  document.querySelectorAll('.star-btn').forEach((b,i) => b.style.opacity = i<r ? '1':'0.3');
+}
+
+function submitRating() {
+  if (!APP.userRating) { showToast('Please select a rating','warning'); return; }
+  document.getElementById('rating-section').innerHTML = `<div style="text-align:center;padding:1rem;background:rgba(16,185,129,.1);border-radius:var(--radius-lg);border:1px solid rgba(16,185,129,.3)"><p style="color:var(--success);font-weight:700">✅ Thanks for your ${APP.userRating}-star rating!</p></div>`;
+  showToast('Rating submitted! Thank you 🎉','success');
+}
+
+// ═══════════════════════════════════════════
+// PROFILE
+// ═══════════════════════════════════════════
+function renderProfile() {
+  const name = APP.user?.name || 'User';
+  const email = APP.user?.email || 'user@email.com';
+  document.getElementById('profile-avatar').textContent = name[0].toUpperCase();
+  document.getElementById('profile-name').textContent = name;
+  document.getElementById('profile-email').textContent = email;
+  document.getElementById('profile-role').textContent = APP.role;
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+// Init payment default
+selectPayment('cash');
+
+// Render default group rides
+renderGroupRides(false);
+
+// Render default history
+renderHistory();
+
+// Render default safety
+renderSafety();
+
+// Hide SOS button initially
+document.querySelectorAll('.sos-btn').forEach(b => b.style.display = 'none');
+
+console.log('🚖 Travix2 Standalone App Loaded!');
+</script>
+</body>
+</html>

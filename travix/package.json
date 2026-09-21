@@ -1,0 +1,16 @@
+{
+  "name": "travix2",
+  "version": "1.0.0",
+  "description": "Full-stack ride-booking platform with live GPS, smart group rides, and safety system",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix client && npm install --prefix server",
+    "dev": "start /B npm run --prefix server dev && npm run --prefix client dev",
+    "dev:client": "npm run --prefix client dev",
+    "dev:server": "npm run --prefix server dev"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4",
+    "react-leaflet": "^5.0.0"
+  }
+}
